@@ -1,2 +1,3 @@
 # m h dom mon dow  user   command
-0 8 * * * root  cd /app && /usr/local/bin/python /app/main.py --all >> /var/log/cron.log 2>&1
+# Executa às 13:45 (America/Sao_Paulo). Faz git pull e roda tudo (--all).
+15 13 * * * root  cd /app && if [ -d .git ]; then GIT_TERMINAL_PROMPT=0 git pull --rebase --autostash || true; fi; /usr/local/bin/python /app/main.py --all >> /var/log/cron.log 2>&1
