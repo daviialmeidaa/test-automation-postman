@@ -1,0 +1,609 @@
+{
+	"info": {
+		"_postman_id": "d9c22306-c7e8-497f-b7a5-b542ef527d24",
+		"name": "Senff",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "24358452",
+		"_collection_link": "https://iebt-digital.postman.co/workspace/Senff---Exemplo~ab728d90-be12-4885-8b22-890f1e82d878/collection/20971020-d9c22306-c7e8-497f-b7a5-b542ef527d24?action=share&source=collection_link&creator=24358452"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"/**",
+							" * AUTH — TESTS (POST-RESPONSE)",
+							" * Propósito",
+							" *  - Validar resposta básica e persistir tokens para as próximas chamadas.",
+							" *",
+							" * Validações",
+							" *  - HTTP 200",
+							" *  - Tempo de resposta < 2000 ms",
+							" *",
+							" * Saídas",
+							" *  - REFRESH_TOKEN (env)",
+							" *  - ACCESS_TOKEN  (env)",
+							" */",
+							"pm.test(\"Status 200\", () => {",
+							"  pm.expect(pm.response.code).to.eql(200);",
+							"});",
+							"",
+							"const json = pm.response.json();",
+							"pm.environment.set(\"REFRESH_TOKEN\", json.refresh_token);",
+							"pm.environment.set(\"ACCESS_TOKEN\", json.access_token);",
+							"",
+							"pm.test(\"Tempo < 2000ms\", () => {",
+							"  pm.expect(pm.response.responseTime).to.be.below(2000);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"/**\r",
+							" * AUTH — PRE-REQUEST\r",
+							" * Propósito\r",
+							" *  - Garantir base URL válida e evitar duplicidade no path.\r",
+							" *  - Incluir headers mínimos exigidos.\r",
+							" *\r",
+							" * Validações\r",
+							" *  - AUTH_URL definido.\r",
+							" *  - Alerta para possível '/auth' duplicado (quando AUTH_URL já contém '/auth' e o path também começa com /v1/auth).\r",
+							" *\r",
+							" * Ações\r",
+							" *  - Normaliza AUTH_URL (remove barra final).\r",
+							" *  - Upsert de headers: account, tenant-id, Content-Type: application/json.\r",
+							" */\r",
+							"(function () {\r",
+							"  const base = (pm.environment.get(\"AUTH_URL\") || \"\").trim().replace(/\\/+$/, \"\");\r",
+							"  pm.test(\"AUTH_URL definido\", () => pm.expect(base).to.not.be.empty);\r",
+							"\r",
+							"  const path = pm.request.url.getPath(); // ex: /v1/auth\r",
+							"  const full = `${base}${path}`;\r",
+							"  if (/\\/auth\\/v1\\/auth/.test(full)) {\r",
+							"    console.warn(\"Possível '/auth' duplicado: ajuste AUTH_URL ou o path do request.\");\r",
+							"  }\r",
+							"\r",
+							"  // Headers mínimos\r",
+							"  function upsert(k, v){ pm.request.headers.upsert({ key:k, value:v }); }\r",
+							"  const account = pm.environment.get(\"ACCOUNT\");\r",
+							"  const tenant  = pm.environment.get(\"TENANT-ID\");\r",
+							"  if (account) upsert(\"account\", account);\r",
+							"  if (tenant)  upsert(\"tenant-id\", tenant);\r",
+							"  upsert(\"Content-Type\", \"application/json\");\r",
+							"})();\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "account",
+						"value": "{{ACCOUNT}}"
+					},
+					{
+						"key": "tenant-id",
+						"value": "{{TENANT-ID}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\": \"{{USERNAME}}\",\n    \"password\": \"{{PASSWORD}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{AUTH_URL}}/v1/auth",
+					"host": [
+						"{{AUTH_URL}}"
+					],
+					"path": [
+						"v1",
+						"auth"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Refresh Token",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"/**",
+							" * REFRESH TOKEN — TESTS (POST-RESPONSE)",
+							" * Propósito",
+							" *  - Validar resposta e atualizar tokens de sessão.",
+							" *",
+							" * Validações",
+							" *  - HTTP 200",
+							" *  - Tempo de resposta < 2000 ms",
+							" *",
+							" * Saídas",
+							" *  - REFRESH_TOKEN (env)",
+							" *  - ACCESS_TOKEN  (env)",
+							" */",
+							"pm.test(\"Status 200\", () => {",
+							"  pm.expect(pm.response.code).to.eql(200);",
+							"});",
+							"",
+							"const json = pm.response.json();",
+							"pm.environment.set(\"REFRESH_TOKEN\", json.refresh_token);",
+							"pm.environment.set(\"ACCESS_TOKEN\", json.access_token);",
+							"",
+							"pm.test(\"Tempo < 2000ms\", () => {",
+							"  pm.expect(pm.response.responseTime).to.be.below(2000);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"/**\r",
+							" * REFRESH TOKEN — PRE-REQUEST\r",
+							" * Propósito\r",
+							" *  - Garantir base URL válida e evitar duplicidade no path.\r",
+							" *  - Incluir headers mínimos exigidos.\r",
+							" *\r",
+							" * Validações\r",
+							" *  - AUTH_URL definido.\r",
+							" *  - Alerta para possível '/auth' duplicado (quando AUTH_URL já contém '/auth' e o path também começa com /v1/auth/refresh).\r",
+							" *\r",
+							" * Ações\r",
+							" *  - Normaliza AUTH_URL (remove barra final).\r",
+							" *  - Upsert de headers: account, tenant-id, Content-Type: application/json.\r",
+							" */\r",
+							"(function () {\r",
+							"  const base = (pm.environment.get(\"AUTH_URL\") || \"\").trim().replace(/\\/+$/, \"\");\r",
+							"  pm.test(\"AUTH_URL definido\", () => pm.expect(base).to.not.be.empty);\r",
+							"\r",
+							"  const path = pm.request.url.getPath(); // ex: /v1/auth/refresh\r",
+							"  const full = `${base}${path}`;\r",
+							"  if (/\\/auth\\/v1\\/auth/.test(full)) {\r",
+							"    console.warn(\"Possível '/auth' duplicado: ajuste AUTH_URL ou o path do request.\");\r",
+							"  }\r",
+							"\r",
+							"  function upsert(k, v){ pm.request.headers.upsert({ key:k, value:v }); }\r",
+							"  const account = pm.environment.get(\"ACCOUNT\");\r",
+							"  const tenant  = pm.environment.get(\"TENANT-ID\");\r",
+							"  if (account) upsert(\"account\", account);\r",
+							"  if (tenant)  upsert(\"tenant-id\", tenant);\r",
+							"  upsert(\"Content-Type\", \"application/json\");\r",
+							"})();\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{REFRESH_TOKEN}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "account",
+						"value": "{{ACCOUNT}}"
+					},
+					{
+						"key": "tenant-id",
+						"value": "{{TENANT-ID}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{AUTH_URL}}/v1/auth/refresh",
+					"host": [
+						"{{AUTH_URL}}"
+					],
+					"path": [
+						"v1",
+						"auth",
+						"refresh"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List Agreements",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"/**",
+							" * LIST AGREEMENTS — TESTS",
+							" * - 200",
+							" * - Tempo < 2000 ms",
+							" * - rows é array",
+							" * - Quantidade de linhas (exibe total)",
+							" * - Salva 1º item e mostra id/code/name no relatório",
+							" */",
+							"",
+							"pm.test(\"Status 200\", () => pm.expect(pm.response.code).to.eql(200));",
+							"pm.test(\"Tempo < 2000ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+							"",
+							"const json = pm.response.json();",
+							"",
+							"pm.test(\"rows é array\", () => pm.expect(json.rows).to.be.an(\"array\"));",
+							"",
+							"const rows = Array.isArray(json.rows) ? json.rows : [];",
+							"pm.environment.set(\"AGREEMENTS_ROW_COUNT\", String(rows.length));",
+							"pm.test(`Quantidade de linhas ≥ 1 (total = ${rows.length})`, () => {",
+							"  pm.expect(rows.length).to.be.at.least(1);",
+							"});",
+							"",
+							"if (rows.length > 0) {",
+							"  const first = rows[0];",
+							"",
+							"  // salva p/ o GET",
+							"  pm.environment.set(\"AGREEMENT_ID\", String(first.id));",
+							"  pm.environment.set(\"AGREEMENT_FIRST_ITEM\", JSON.stringify(first));",
+							"",
+							"  // imprime no relatório (título do teste)",
+							"  const id   = first?.id ?? \"-\";",
+							"  const code = typeof first?.code === \"string\" ? first.code : \"-\";",
+							"  const name = typeof first?.name === \"string\" ? first.name : \"-\";",
+							"",
+							"  pm.test(`Primeiro item salvo → id=${id} | code=${code} | name=${name}`, () => {",
+							"    pm.expect(id, \"id do primeiro item ausente\").to.not.be.undefined;",
+							"  });",
+							"",
+							"  // opcional: log completo no console",
+							"  console.log(\"AGREEMENT_FIRST_ITEM:\", first);",
+							"}",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"/**\r",
+							" * LIST AGREEMENTS — PRE-REQUEST\r",
+							" * Propósito\r",
+							" *  - Garantir API_URL válida e evitar duplicidade no path (/api/api).\r",
+							" *  - Incluir headers mínimos de contexto e autenticação.\r",
+							" *\r",
+							" * Validações\r",
+							" *  - API_URL definido.\r",
+							" *  - Alerta para possível '/api' duplicado.\r",
+							" *\r",
+							" * Ações\r",
+							" *  - Normaliza API_URL (remove barra final).\r",
+							" *  - Upsert de headers: account, tenant-id, x-store-code, Accept.\r",
+							" *  - Injeta Authorization: Bearer ACCESS_TOKEN caso não esteja presente.\r",
+							" */\r",
+							"(function () {\r",
+							"  const base = (pm.environment.get(\"API_URL\") || \"\").trim().replace(/\\/+$/, \"\");\r",
+							"  pm.test(\"API_URL definido\", () => pm.expect(base).to.not.be.empty);\r",
+							"\r",
+							"  const path = pm.request.url.getPath(); // ex: /v1/admin/agreement\r",
+							"  const full = `${base}${path}`;\r",
+							"  if (/\\/api\\/api\\//.test(full)) {\r",
+							"    console.warn(\"Possível '/api' duplicado: ajuste API_URL ou o path do request.\");\r",
+							"  }\r",
+							"\r",
+							"  function upsert(k, v){ pm.request.headers.upsert({ key:k, value:v }); }\r",
+							"  const account = pm.environment.get(\"ACCOUNT\");\r",
+							"  const tenant  = pm.environment.get(\"TENANT-ID\");\r",
+							"  const store   = pm.environment.get(\"STORE_CODE\");\r",
+							"  if (account) upsert(\"account\", account);\r",
+							"  if (tenant)  upsert(\"tenant-id\", tenant);\r",
+							"  if (store)   upsert(\"x-store-code\", store);\r",
+							"  upsert(\"Accept\", \"application/json\");\r",
+							"\r",
+							"  // Bearer (caso a collection não herde)\r",
+							"  const token = pm.environment.get(\"ACCESS_TOKEN\");\r",
+							"  if (token && !pm.request.headers.has(\"Authorization\")) {\r",
+							"    upsert(\"Authorization\", `Bearer ${token}`);\r",
+							"  }\r",
+							"})();\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{ACCESS_TOKEN}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "account",
+						"value": "{{ACCOUNT}}"
+					},
+					{
+						"key": "tenant-id",
+						"value": "{{TENANT-ID}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-store-code",
+						"value": "{{STORE_CODE}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{API_URL}}/v1/admin/agreement",
+					"host": [
+						"{{API_URL}}"
+					],
+					"path": [
+						"v1",
+						"admin",
+						"agreement"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Agreement By Id",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"/**",
+							" * GET AGREEMENT BY ID — TESTS (compara id, code, name)",
+							" * - 200",
+							" * - Tempo < 2000 ms",
+							" * - Linhas retornadas (GET) = 1",
+							" * - Consistência com o LIST: id (obrigatório) + code e name (se existirem)",
+							" */",
+							"",
+							"pm.test(\"Status 200\", () => pm.expect(pm.response.code).to.eql(200));",
+							"pm.test(\"Tempo < 2000ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+							"",
+							"const body = pm.response.json();",
+							"const savedRaw = pm.environment.get(\"AGREEMENT_FIRST_ITEM\");",
+							"",
+							"// Normaliza o retorno do GET para array de \"linhas\"",
+							"function normalizeRows(j) {",
+							"  if (!j || typeof j !== \"object\") return [];",
+							"  if (Array.isArray(j.rows)) return j.rows;                // { rows: [...] }",
+							"  if (Array.isArray(j.data)) return j.data;                // { data: [...] }",
+							"  if (j.data && typeof j.data === \"object\") return [j.data]; // { data: {...} }",
+							"  if (j.row && typeof j.row === \"object\") return [j.row];     // { row: {...} }",
+							"  if (j.agreement && typeof j.agreement === \"object\") return [j.agreement]; // { agreement: {...} }",
+							"  if (j.id) return [j];                                    // entidade no topo",
+							"  return [];",
+							"}",
+							"",
+							"const rowsLike = normalizeRows(body);",
+							"const returnedCount = rowsLike.length;",
+							"",
+							"// Contagem (GET by id deve trazer 1)",
+							"pm.environment.set(\"AGREEMENT_GET_COUNT\", String(returnedCount));",
+							"pm.test(\"Linhas retornadas (GET) = 1\", () => {",
+							"  pm.expect(returnedCount).to.eql(1);",
+							"});",
+							"",
+							"// Consistência com o LIST",
+							"if (savedRaw && returnedCount > 0) {",
+							"  const fromList = JSON.parse(savedRaw);",
+							"  const entity = rowsLike[0];",
+							"",
+							"  // id é obrigatório",
+							"  pm.test(\"GET.id == LIST.id\", () => {",
+							"    pm.expect(entity.id, \"id ausente no objeto do GET\").to.eql(fromList.id);",
+							"  });",
+							"",
+							"  // Campos para comparaçao",
+							"  const OPTIONAL_FIELDS = [\"code\", \"name\"];",
+							"",
+							"  OPTIONAL_FIELDS.forEach((field) => {",
+							"    const a = entity[field];",
+							"    const b = fromList[field];",
+							"",
+							"    if (a !== undefined && b !== undefined) {",
+							"      pm.test(`GET.${field} == LIST.${field}`, () => {",
+							"        pm.expect(a).to.eql(b);",
+							"      });",
+							"    }",
+							"  });",
+							"}",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"/**\r",
+							" * GET AGREEMENT BY ID — PRE-REQUEST\r",
+							" * Propósito\r",
+							" *  - Garantir API_URL válida e evitar duplicidade no path (/api/api).\r",
+							" *  - Incluir headers mínimos e autenticação.\r",
+							" *  - Assegurar que AGREEMENT_ID foi definido previamente (via LIST).\r",
+							" *\r",
+							" * Validações\r",
+							" *  - API_URL definido.\r",
+							" *  - Alerta para possível '/api' duplicado.\r",
+							" *  - AGREEMENT_ID definido (pré-requisito).\r",
+							" *\r",
+							" * Ações\r",
+							" *  - Normaliza API_URL (remove barra final).\r",
+							" *  - Upsert de headers: account, tenant-id, x-store-code, Accept.\r",
+							" *  - Injeta Authorization: Bearer ACCESS_TOKEN caso não esteja presente.\r",
+							" */\r",
+							"(function () {\r",
+							"  const base = (pm.environment.get(\"API_URL\") || \"\").trim().replace(/\\/+$/, \"\");\r",
+							"  pm.test(\"API_URL definido\", () => pm.expect(base).to.not.be.empty);\r",
+							"\r",
+							"  const path = pm.request.url.getPath(); // ex: /v1/admin/agreement/{{AGREEMENT_ID}}\r",
+							"  const full = `${base}${path}`;\r",
+							"  if (/\\/api\\/api\\//.test(full)) {\r",
+							"    console.warn(\"Possível '/api' duplicado: ajuste API_URL ou o path do request.\");\r",
+							"  }\r",
+							"\r",
+							"  function upsert(k, v){ pm.request.headers.upsert({ key:k, value:v }); }\r",
+							"  const account = pm.environment.get(\"ACCOUNT\");\r",
+							"  const tenant  = pm.environment.get(\"TENANT-ID\");\r",
+							"  const store   = pm.environment.get(\"STORE_CODE\");\r",
+							"  if (account) upsert(\"account\", account);\r",
+							"  if (tenant)  upsert(\"tenant-id\", tenant);\r",
+							"  if (store)   upsert(\"x-store-code\", store);\r",
+							"  upsert(\"Accept\", \"application/json\");\r",
+							"\r",
+							"  // Bearer (caso a collection não herde)\r",
+							"  const token = pm.environment.get(\"ACCESS_TOKEN\");\r",
+							"  if (token && !pm.request.headers.has(\"Authorization\")) {\r",
+							"    upsert(\"Authorization\", `Bearer ${token}`);\r",
+							"  }\r",
+							"\r",
+							"  // Pré-requisito: AGREEMENT_ID vindo do LIST\r",
+							"  const id = pm.environment.get(\"AGREEMENT_ID\");\r",
+							"  pm.test(\"AGREEMENT_ID definido (rode o LIST antes)\", () => {\r",
+							"    pm.expect(id, \"AGREEMENT_ID não definido\").to.exist;\r",
+							"  });\r",
+							"})();\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "account",
+						"value": "{{ACCOUNT}}"
+					},
+					{
+						"key": "tenant-id",
+						"value": "{{TENANT-ID}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-store-code",
+						"value": "{{STORE_CODE}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{API_URL}}/v1/admin/agreement/{{AGREEMENT_ID}}",
+					"host": [
+						"{{API_URL}}"
+					],
+					"path": [
+						"v1",
+						"admin",
+						"agreement",
+						"{{AGREEMENT_ID}}"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{ACCESS_TOKEN}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

@@ -1,0 +1,8 @@
+# Ambiente virtual Python
+.venv/
+
+# Variáveis de ambiente
+.env
+
+# Logs na raiz do projeto
+/logs/
