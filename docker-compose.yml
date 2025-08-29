@@ -1,0 +1,17 @@
+version: "3.8"
+services:
+  automatest:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: automatest-runner
+    environment:
+      - TZ=America/Sao_Paulo
+      # opcional: também dá para forçar via env
+      - AUTOMATEST_MODE=ALL
+    volumes:
+      - ./collections:/app/collections:ro    # suas coleções/environments
+      - ./logs:/app/logs                     # saída dos runs
+      - ./.env:/app/.env:ro                  # SMTP + POSTMAN_API_KEY
+      - ./constants.py:/app/constants.py:ro  # destinatários
+    restart: unless-stopped

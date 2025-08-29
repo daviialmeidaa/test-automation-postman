@@ -506,54 +506,71 @@ def choose_environment(root: str, project: str):
 # =====================================================================
 # Main
 # =====================================================================
-def main():
-    load_dotenv()  # SMTP e outras configs (NÃO usa destinatários)
+def main(auto_all: bool = False):
+    """
+    Executa o runner.
+    - Quando `auto_all=True` (ou AUTOTEST_MODE=ALL/TRUE/1 no ambiente), roda SEM interação a opção "TUDO".
+    - Caso contrário, apresenta o menu interativo.
+    """
+    load_dotenv()  # SMTP + POSTMAN_API_KEY (destinatários NUNCA estão aqui)
 
+    # Se vier do container/CLI, permite forçar ALL via variável de ambiente
+    auto_all = auto_all or (os.getenv("AUTOMATEST_MODE", "").lower() in ("all", "true", "1"))
+
+    # Pré-checagens
     if not which_postman():
         print("ERRO: Postman CLI não encontrado no PATH. Instale-o e garanta o comando 'postman'.")
         raise SystemExit(2)
 
     postman_login_if_needed()
 
+    # Configurações gerais
     collections_root = os.getenv("COLLECTIONS_ROOT", "collections")
     email_cfg = {
-        "SMTP_HOST": os.getenv("SMTP_HOST",""),
-        "SMTP_PORT": os.getenv("SMTP_PORT","465"),
-        "SMTP_USE_TLS": os.getenv("SMTP_USE_TLS","false"),
-        "SMTP_USER": os.getenv("SMTP_USER",""),
-        "SMTP_PASS": os.getenv("SMTP_PASS",""),
+        "SMTP_HOST": os.getenv("SMTP_HOST", ""),
+        "SMTP_PORT": os.getenv("SMTP_PORT", "465"),
+        "SMTP_USE_TLS": os.getenv("SMTP_USE_TLS", "false"),
+        "SMTP_USER": os.getenv("SMTP_USER", ""),
+        "SMTP_PASS": os.getenv("SMTP_PASS", ""),
         # MAIL_FROM cai para SMTP_USER se vazio
-        "MAIL_FROM": os.getenv("MAIL_FROM","") or os.getenv("SMTP_USER",""),
-        "MAIL_SUBJECT": os.getenv("MAIL_SUBJECT","[AUTOMATEST] Relatório de coleções Postman"),
+        "MAIL_FROM": os.getenv("MAIL_FROM", "") or os.getenv("SMTP_USER", ""),
+        "MAIL_SUBJECT": os.getenv("MAIL_SUBJECT", "[AUTOMATEST] Relatório de coleções Postman"),
     }
 
-    choice = prompt_menu(
-        ["Executar TUDO (todas coleções x todos environments)",
-         "Executar projeto + environment específico"],
-        "Como deseja executar?"
-    )
-
-    if choice == 0:
+    # Plano de execução
+    if auto_all:
         exec_plan = find_all_pairs(collections_root)
     else:
-        proj = choose_project(collections_root)
-        if not proj:
-            return
-        env_path = choose_environment(collections_root, proj)
-        if not env_path:
-            return
-        exec_plan = find_pairs_for_project(collections_root, proj, env_path)
+        choice = prompt_menu(
+            ["Executar TUDO (todas coleções x todos environments)",
+             "Executar projeto + environment específico"],
+            "Como deseja executar?"
+        )
+        if choice == 0:
+            exec_plan = find_all_pairs(collections_root)
+        else:
+            proj = choose_project(collections_root)
+            if not proj:
+                print("Operação cancelada (sem projeto).")
+                return
+            env_path = choose_environment(collections_root, proj)
+            if not env_path:
+                print("Operação cancelada (sem environment).")
+                return
+            exec_plan = find_pairs_for_project(collections_root, proj, env_path)
 
     if not exec_plan:
-        print("Nada para executar.")
+        print("Nada para executar: verifique a pasta 'collections/'.")
         return
 
+    # Diretório de logs
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     base_log_dir = os.path.join("logs", timestamp)
 
     grouped = {}
     attachments = []
 
+    # Execução
     for job in exec_plan:
         proj = job["project"]
         col = job["collection"]
@@ -564,12 +581,15 @@ def main():
         print(f"\n=== Executando: {proj} | env={os.path.basename(env)} | col={os.path.basename(col)}")
         result = run_collection(col, env, out_dir)
 
+        # Anexos do e-mail
         if result.get("report_path"):
             attachments.append(result["report_path"])
         if result.get("stdout_path"):
             attachments.append(result["stdout_path"])
 
+        # Resumo (JSON + fallback no stdout)
         summary = summarize_run(result.get("report_path"), result.get("stdout"))
+
         grouped.setdefault(proj, {})
         grouped[proj].setdefault(env_label, [])
         grouped[proj][env_label].append({
@@ -583,13 +603,17 @@ def main():
             }
         })
 
+    # Relatórios (texto e HTML)
     body_txt = build_human_report(grouped)
     body_html = build_html_report(grouped)
 
+    # Eco no console
     print("\n" + body_txt)
 
+    # Envio de e-mail (destinatários vêm de constants.EMAIL_RECIPIENTS)
     ok_send = send_mail(email_cfg["MAIL_SUBJECT"], body_txt, body_html, attachments, email_cfg)
     print("E-mail enviado." if ok_send else "E-mail NÃO enviado (ver console).")
+
 
 if __name__ == "__main__":
     main()
