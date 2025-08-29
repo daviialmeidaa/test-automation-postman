@@ -1,0 +1,11 @@
+Cron original para automação:
+
+# m h dom mon dow  user   command
+# Executa às 13:45 (America/Sao_Paulo). Faz git pull e roda tudo (--all).
+30 13 * * * root  cd /app && if [ -d .git ]; then GIT_TERMINAL_PROMPT=0 git pull --rebase --autostash || true; fi; /usr/local/bin/python /app/main.py --all >> /var/log/cron.log 2>&1
+
+
+Cron para validação - disparo unico
+
+# 29/08/2025 às 13:45 — executa uma ÚNICA vez
+45 13 29 8 * root  cd /app && if [ -d .git ]; then GIT_TERMINAL_PROMPT=0 git pull --rebase --autostash || true; fi; /usr/local/bin/python /app/main.py --all >> /var/log/cron.log 2>&1
