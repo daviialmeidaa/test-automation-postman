@@ -616,4 +616,6 @@ def main(auto_all: bool = False):
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    _auto = any(arg in ("--all", "-A") for arg in sys.argv[1:])
+    main(auto_all=_auto)

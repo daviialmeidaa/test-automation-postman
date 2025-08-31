@@ -31,12 +31,9 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 COPY crontab /etc/cron.d/automatest
-
-# Normaliza EOL (protege contra CRLF) e registra a crontab
 RUN chmod 0644 /etc/cron.d/automatest \
     && sed -i 's/\r$//' /entrypoint.sh \
-    && sed -i 's/\r$//' /etc/cron.d/automatest \
-    && crontab /etc/cron.d/automatest
+    && sed -i 's/\r$//' /etc/cron.d/automatest
 
 # Diretórios úteis
 RUN mkdir -p /app/collections /app/logs

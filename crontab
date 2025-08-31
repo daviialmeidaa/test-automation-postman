@@ -1,2 +1,7 @@
-# 29/08/2025 às 13:45 — executa uma ÚNICA vez
-0 8 * * 1-6 root  cd /app && if [ -d .git ]; then GIT_TERMINAL_PROMPT=0 git pull --rebase --autostash || true; fi; /usr/local/bin/python /app/main.py --all >> /var/log/cron.log 2>&1
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+TZ=America_Sao_Paulo
+MAILTO=""
+
+0 7 * * * root cd /app && if [ -d .git ]; then GIT_TERMINAL_PROMPT=0 git pull --rebase --autostash || true; fi; /usr/local/bin/python /app/main.py --all >> /var/log/cron.log 2>&1
+
